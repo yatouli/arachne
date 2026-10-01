@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arachne"
+version = "0.1.0"
+description = "Arachne — an adaptive AI web-scraping framework with a plugin system, anti-anti-bot (anti-detection) engines, JS reverse-engineering helpers, and a Scrapy-like spider framework."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Arachne contributors" }]
+keywords = ["scraping", "crawler", "anti-bot", "stealth", "js-reverse", "plugins", "spider", "ai"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "parsel>=1.8.1",
+    "lxml>=5.1.0",
+    "cssselect>=1.2.0",
+    "httpx>=0.27.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+# Stealth HTTP (browser TLS/HTTP2 fingerprint impersonation) + browser automation
+stealth = [
+    "curl_cffi>=0.6.0",
+    "playwright>=1.44.0",
+]
+# JS reverse engineering (embedded V8 / QuickJS engines)
+js = [
+    "py_mini_racer>=0.6.0",
+]
+# AI-assisted selector/schema generation (zero extra deps: uses httpx directly
+# against any OpenAI-compatible endpoint)
+ai = [
+]
+
+# Extra exporters
+export = [
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+]
+all = [
+    "curl_cffi>=0.6.0",
+    "playwright>=1.44.0",
+    "py_mini_racer>=0.6.0",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+]
+
+[project.scripts]
+arachne = "arachne.cli:main"
+
+[project.entry-points."arachne.plugins"]
+# Third-party packages can register site plugins here:
+# my_package = "my_package.plugins"
+
+[tool.setuptools.packages.find]
+include = ["arachne*"]
+
+[tool.setuptools.package-data]
+arachne = ["py.typed"]

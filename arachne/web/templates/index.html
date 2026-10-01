@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arachne 爬虫控制台</title>
+<style>
+  :root {
+    --bg: #0f1420; --bg2: #161c2c; --panel: #1b2233; --panel2: #212a3f;
+    --border: #2c3650; --text: #e6ebf5; --muted: #8b96ad;
+    --accent: #4f8cff; --accent2: #7c5cff; --green: #2fbf71; --red: #ff5d6c;
+    --yellow: #f5b83d; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 14px; }
+  a { color: var(--accent); }
+  header { display: flex; align-items: center; gap: 14px; padding: 14px 22px;
+           background: linear-gradient(90deg, #171e30, #1a2340); border-bottom: 1px solid var(--border);
+           position: sticky; top: 0; z-index: 10; }
+  header .logo { font-size: 19px; font-weight: 700; letter-spacing: .5px; }
+  header .logo .sp { color: var(--accent); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border);
+          color: var(--muted); white-space: nowrap; }
+  .chip.on { color: #0f1420; background: var(--green); border-color: var(--green); }
+  .chip.off { color: var(--muted); }
+
+  .wrap { display: grid; grid-template-columns: 1fr 360px; gap: 18px; padding: 18px 22px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+          padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 9px 11px; font-size: 13px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 90px; font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+  select { cursor: pointer; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .inline { display: flex; align-items: center; gap: 8px; }
+  .inline input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  button { background: var(--accent); color: #fff; border: none; border-radius: 8px;
+           padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  button.secondary { background: var(--panel2); border: 1px solid var(--border); }
+  button.danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .urlbar { display: flex; gap: 10px; }
+  .urlbar input { flex: 1; font-size: 15px; padding: 12px 14px; }
+  .urlbar button { min-width: 110px; }
+
+  .fieldrow { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .fieldrow input { flex: 1; }
+  .fieldrow .name { flex: 0 0 130px; }
+  .fieldrow .del { flex: 0 0 auto; background: transparent; color: var(--red); border: 1px solid var(--red);
+                    padding: 6px 10px; font-size: 12px; }
+
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin: 14px 0 10px; flex-wrap: wrap; }
+  .tab { padding: 7px 13px; cursor: pointer; border-radius: 8px 8px 0 0; color: var(--muted); font-size: 13px;
+         border: 1px solid transparent; border-bottom: none; }
+  .tab.active { color: var(--text); background: var(--panel2); border-color: var(--border); }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+        overflow: auto; max-height: 60vh; font-size: 12px; white-space: pre-wrap; word-break: break-word;
+        font-family: "Cascadia Code", Consolas, monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  td code { color: var(--accent2); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; }
+  .badge.green { background: rgba(47,191,113,.15); color: var(--green); }
+  .badge.red { background: rgba(255,93,108,.15); color: var(--red); }
+  .badge.yellow { background: rgba(245,184,61,.15); color: var(--yellow); }
+
+  .plugin-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0;
+                 border-bottom: 1px solid var(--border); }
+  .plugin-item .pn { font-weight: 600; }
+  .plugin-item .pd { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .plugin-item .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 11px; background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 10px;
+           background: var(--panel2); border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(0,0,0,.4);
+           display: none; z-index: 100; max-width: 380px; }
+  .toast.show { display: block; }
+  .toast.ok { border-color: var(--green); }
+  .toast.err { border-color: var(--red); }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3);
+             border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .meta { display: grid; grid-template-columns: 160px 1fr; gap: 8px 12px; font-size: 13px; }
+  .meta b { color: var(--muted); font-weight: 500; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .split { display: flex; gap: 10px; }
+  .split > div { flex: 1; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🕷️ Arachne <span class="sp">爬虫控制台</span></div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="wrap">
+  <!-- ===================== 主列：抓取 ===================== -->
+  <div>
+    <div class="card">
+      <h2><span class="dot"></span>抓取网页</h2>
+      <div class="urlbar">
+        <input type="text" id="url" placeholder="输入网址，例如 https://example.com 或 news.ycombinator.com" />
+        <button id="btn-scrape">抓取</button>
+      </div>
+
+      <div class="split">
+        <div>
+          <label>取数器 Fetcher</label>
+          <select id="fetcher">
+            <option value="http">HTTP（隐身，TLS 指纹伪装）</option>
+            <option value="dynamic">Dynamic（Playwright 浏览器）</option>
+            <option value="stealth">Stealth（隐身浏览器，反检测）</option>
+          </select>
+        </div>
+        <div>
+          <label>浏览器指纹 Impersonate</label>
+          <select id="impersonate"></select>
+        </div>
+      </div>
+
+      <div class="split">
+        <div>
+          <label>代理 Proxy（可选，http://user:pass@host:port）</label>
+          <input type="text" id="proxy" placeholder="留空 = 直连" />
+        </div>
+        <div>
+          <label>XHR 捕获（正则，动态/隐身浏览器生效）</label>
+          <input type="text" id="capture-xhr" placeholder='如 /api/ 或 \.json' />
+        </div>
+      </div>
+
+      <div class="inline" style="margin-top:12px; gap:18px;">
+        <span class="inline"><input type="checkbox" id="use-plugins" checked><span>自动匹配插件</span></span>
+        <span class="inline"><input type="checkbox" id="headless" checked><span>无头浏览器</span></span>
+        <span class="inline"><input type="checkbox" id="readable"><span>智能正文提取</span></span>
+        <span class="inline"><input type="checkbox" id="download-images"><span>下载图片</span></span>
+      </div>
+
+      <label style="margin-top:14px;">按选择器提取字段（可选，留空则依赖插件）</label>
+      <div id="fields"></div>
+      <button class="secondary" id="btn-add-field" style="margin-top:6px; padding:7px 12px; font-size:12px;">＋ 添加字段</button>
+      <div class="hint">字段格式：名称 = CSS 选择器，如 <code>title = h1::text</code>、<code>links = a::attr(href)</code></div>
+    </div>
+
+    <div class="card" id="result-card" style="display:none;">
+      <h2><span class="dot"></span>结果 <span id="result-badge" style="margin-left:auto;"></span></h2>
+      <div id="result-meta" class="meta"></div>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-pane="pane-items">数据</div>
+        <div class="tab" data-pane="pane-fields">字段</div>
+        <div class="tab" data-pane="pane-readable">正文</div>
+        <div class="tab" data-pane="pane-images">图片</div>
+        <div class="tab" data-pane="pane-md">Markdown</div>
+        <div class="tab" data-pane="pane-html">HTML</div>
+        <div class="tab" data-pane="pane-xhr">XHR</div>
+      </div>
+      <div class="pane active" id="pane-items"></div>
+      <div class="pane" id="pane-fields"></div>
+      <div class="pane" id="pane-readable"></div>
+      <div class="pane" id="pane-images"></div>
+      <div class="pane" id="pane-md"></div>
+      <div class="pane" id="pane-html"></div>
+      <div class="pane" id="pane-xhr"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>批量爬取（列表 → 详情）</h2>
+      <label>起始列表页 URL</label>
+      <input type="text" id="crawl-url" placeholder="https://haowallpaper.com/" />
+      <div class="split">
+        <div>
+          <label>详情链接正则（留空 = 自动识别列表项）</label>
+          <input type="text" id="crawl-regex" placeholder='留空自动识别，或填 /homeViewLook/(\d+)' />
+        </div>
+        <div>
+          <label>翻页数</label>
+          <input type="number" id="crawl-pages" value="1" min="1" max="20" />
+        </div>
+      </div>
+      <div class="split">
+        <div>
+          <label>并发数</label>
+          <input type="number" id="crawl-concurrency" value="4" min="1" max="16" />
+        </div>
+        <div>
+          <label>图片字段名（该字段的值会作为图片下载，可选）</label>
+          <input type="text" id="crawl-image-field" placeholder="preview" />
+        </div>
+      </div>
+      <label>字段（应用在详情页，名称 = CSS 选择器；留空 = 自动正文提取）</label>
+      <div id="crawl-fields"></div>
+      <button class="secondary" id="btn-add-crawl-field" style="margin-top:6px; padding:7px 12px; font-size:12px;">＋ 添加字段</button>
+      <div style="margin-top:14px;">
+        <button id="btn-crawl" style="width:100%;">开始批量爬取</button>
+      </div>
+      <div id="crawl-result" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Sitemap 全站爬取</h2>
+      <label>域名或网址（自动发现 sitemap.xml）</label>
+      <input type="text" id="sitemap-url" placeholder="https://example.com" />
+      <div class="split">
+        <div>
+          <label>最多爬取页数</label>
+          <input type="number" id="sitemap-limit" value="20" min="1" max="500" />
+        </div>
+        <div>
+          <label>图片字段名（可选）</label>
+          <input type="text" id="sitemap-image-field" placeholder="image" />
+        </div>
+      </div>
+      <div style="margin-top:12px;"><button id="btn-sitemap" style="width:100%;">Sitemap 全站爬取</button></div>
+      <div id="sitemap-result" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>AI 智能提取（需配置 LLM）</h2>
+      <label>URL</label>
+      <input type="text" id="ai-url" placeholder="https://example.com/article" />
+      <label>字段描述（每行 名称=描述）</label>
+      <textarea id="ai-fields" placeholder="title=文章标题&#10;author=作者&#10;content=正文内容"></textarea>
+      <details>
+        <summary>LLM 配置（可选，默认读环境变量）</summary>
+        <label>Base URL</label><input type="text" id="ai-base-url" placeholder="http://localhost:11434/v1" />
+        <label>API Key</label><input type="text" id="ai-api-key" placeholder="sk-..." />
+        <label>模型</label><input type="text" id="ai-model" placeholder="qwen2.5" />
+      </details>
+      <div style="margin-top:12px;"><button id="btn-ai" style="width:100%;">AI 提取</button></div>
+      <pre id="ai-result" style="margin-top:8px; min-height:40px; color:var(--muted);">（结果会显示在这里）</pre>
+    </div>
+  </div>
+
+  <!-- ===================== 侧栏：插件 + JS ===================== -->
+  <div>
+    <div class="card">
+      <h2><span class="dot"></span>站点插件 <span id="plugin-count" style="margin-left:auto; color:var(--muted); font-size:12px;"></span></h2>
+      <div id="plugin-list"></div>
+      <details>
+        <summary>＋ 新建插件</summary>
+        <label>插件名（英文）</label>
+        <input type="text" id="p-name" placeholder="my_site" />
+        <label>匹配域名（逗号分隔）</label>
+        <input type="text" id="p-domains" placeholder="example.com, www.example.com" />
+        <label>记录容器选择器（可选）</label>
+        <input type="text" id="p-container" placeholder=".product" />
+        <div id="p-fields"></div>
+        <button class="secondary" id="btn-add-pfield" style="margin-top:6px; padding:6px 10px; font-size:12px;">＋ 字段</button>
+        <div class="hint">字段：名称 + CSS 选择器，将自动生成 Schema 插件</div>
+        <details style="margin-top:8px;">
+          <summary>高级：直接粘贴完整插件代码</summary>
+          <textarea id="p-code" style="margin-top:8px;" placeholder="from arachne.plugins import SitePlugin, plugin&#10;..."></textarea>
+        </details>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button id="btn-create-plugin" style="flex:1;">创建插件</button>
+          <button class="danger" id="btn-clear-plugin" style="flex:0 0 auto;">清空</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>JS 逆向 / 执行</h2>
+      <textarea id="js-code" placeholder="// 粘贴表达式或 JS 语句&#10;6 * 7&#10;// 或：function sign(t){ return 'x'+t; } sign('a')"></textarea>
+      <button id="btn-js" style="margin-top:8px;">执行 JS</button>
+      <pre id="js-result" style="margin-top:8px; min-height:40px; color:var(--muted);">（结果会显示在这里）</pre>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const IMP_LABELS = {
+  "chrome110":"Chrome 110","chrome116":"Chrome 116","chrome120":"Chrome 120",
+  "chrome124":"Chrome 124","chrome131":"Chrome 131","safari17_0":"Safari 17",
+  "firefox133":"Firefox 133","edge101":"Edge 101",
+};
+
+function toast(msg, ok=true) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast show " + (ok ? "ok" : "err");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+async function api(path, body) {
+  const opts = body ? { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) } : {};
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+function esc(s) { return (s ?? "").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- 状态 ---------- */
+async function loadStatus() {
+  const s = await api("/api/status");
+  const chips = $("#chips");
+  chips.innerHTML = "";
+  const names = { curl_cffi:"curl_cffi", playwright:"Playwright", mini_racer:"V8(JS)", httpx:"AI(httpx)" };
+  for (const [k, label] of Object.entries(names)) {
+    const on = s.backends[k];
+    const c = document.createElement("span");
+    c.className = "chip " + (on ? "on" : "off");
+    c.textContent = on ? "✓ " + label : "✗ " + label;
+    chips.appendChild(c);
+  }
+  // Populate the impersonate dropdown from the installed curl_cffi.
+  const sel = $("#impersonate");
+  sel.innerHTML = (s.impersonates || []).map(n =>
+    `<option value="${n}">${IMP_LABELS[n] || n}</option>`).join("");
+  renderPlugins(s.plugins);
+}
+
+function renderPlugins(plugins) {
+  const list = $("#plugin-list");
+  $("#plugin-count").textContent = plugins.length + " 个";
+  if (!plugins.length) { list.innerHTML = '<div class="hint">暂无插件</div>'; return; }
+  list.innerHTML = plugins.map(p => `
+    <div class="plugin-item">
+      <div>
+        <div class="pn">${esc(p.name)}</div>
+        <div class="pd">${esc(p.description || "—")}</div>
+        <div class="tags">${p.domains.map(d => `<span class="tag">${esc(d)}</span>`).join("")}
+          ${p.fetcher !== "http" ? `<span class="tag">${esc(p.fetcher)}</span>` : ""}</div>
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- 字段行 ---------- */
+function addFieldRow(container, cls) {
+  const row = document.createElement("div");
+  row.className = "fieldrow";
+  row.innerHTML = `<input class="name" placeholder="字段名 (title)"><input class="sel" placeholder="选择器 (h1::text)"><button class="del">✕</button>`;
+  row.querySelector(".del").onclick = () => row.remove();
+  container.appendChild(row);
+}
+$("#btn-add-field").onclick = () => addFieldRow($("#fields"));
+$("#btn-add-pfield").onclick = () => addFieldRow($("#p-fields"));
+
+function collectFields(container) {
+  return [...container.querySelectorAll(".fieldrow")].map(r => ({
+    name: r.querySelector(".name").value.trim(),
+    selector: r.querySelector(".sel").value.trim()
+  })).filter(f => f.name && f.selector);
+}
+
+/* ---------- 抓取 ---------- */
+$("#btn-scrape").onclick = async () => {
+  const url = $("#url").value.trim();
+  if (!url) { toast("请先输入网址", false); return; }
+  const btn = $("#btn-scrape");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 抓取中…';
+  const payload = {
+    url, fetcher: $("#fetcher").value, impersonate: $("#impersonate").value,
+    proxy: $("#proxy").value, headless: $("#headless").checked,
+    use_plugins: $("#use-plugins").checked, readable: $("#readable").checked,
+    download_images: $("#download-images").checked,
+    capture_xhr: $("#capture-xhr").value,
+    fields: collectFields($("#fields")),
+  };
+  const t0 = performance.now();
+  const r = await api("/api/scrape", payload);
+  btn.disabled = false; btn.textContent = "抓取";
+  renderResult(r);
+};
+
+function renderResult(r) {
+  const card = $("#result-card");
+  card.style.display = "block";
+  const badge = $("#result-badge");
+  if (!r.ok) {
+    badge.innerHTML = '<span class="badge red">失败</span>';
+    $("#result-meta").innerHTML = `<div><b>错误</b></div><div><pre style="margin:0">${esc(r.error)}${r.traceback ? "\n\n" + esc(r.traceback) : ""}</pre></div>`;
+    setPane("pane-items"); $("#pane-items").innerHTML = "";
+    return;
+  }
+  const b = r.blocked || {};
+  badge.innerHTML = b.blocked
+    ? `<span class="badge red">被拦截: ${esc(b.kind)}</span>`
+    : `<span class="badge green">成功 · ${r.duration}s</span>`;
+
+  $("#result-meta").innerHTML = `
+    <div><b>URL</b></div><div>${esc(r.url)}</div>
+    <div><b>状态码</b></div><div>${r.status ?? "—"}</div>
+    <div><b>标题</b></div><div>${esc(r.title || "—")}</div>
+    <div><b>取数器</b></div><div>${esc(r.fetcher)}</div>
+    <div><b>匹配插件</b></div><div>${r.matched_plugin ? `<span class="badge green">${esc(r.matched_plugin)}</span>` : '<span class="badge yellow">无</span>'}</div>
+    <div><b>风控检测</b></div><div>${b.blocked ? `${esc(b.kind)}: ${esc(b.reason)}` : "正常"}</div>
+    <div><b>耗时</b></div><div>${r.duration}s</div>`;
+
+  // items
+  const items = r.items || [];
+  let itemsHtml;
+  if (!items.length) {
+    itemsHtml = '<div class="hint">没有结构化数据。若启用了插件但没有命中，可在上面填写字段选择器手动提取。</div>';
+  } else {
+    const keys = [...new Set(items.flatMap(i => Object.keys(i)))];
+    itemsHtml = `<table><thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>` +
+      items.map(i => `<tr>${keys.map(k => `<td>${esc(JSON.stringify(i[k]))}</td>`).join("")}</tr>`).join("") +
+      `</tbody></table>`;
+  }
+  $("#pane-items").innerHTML = itemsHtml;
+
+  // fields
+  const f = r.fields || {};
+  $("#pane-fields").innerHTML = Object.keys(f).length
+    ? `<table><thead><tr><th>字段</th><th>值</th></tr></thead><tbody>` +
+      Object.entries(f).map(([k,v]) => `<tr><td>${esc(k)}</td><td>${esc(v ?? "—")}</td></tr>`).join("") + `</tbody></table>`
+    : '<div class="hint">未配置字段提取。</div>';
+
+  // readable 正文
+  const rd = r.readable;
+  $("#pane-readable").innerHTML = rd
+    ? `<div class="meta" style="margin-bottom:10px;">
+        <div><b>标题</b></div><div>${esc(rd.title)}</div>
+        ${rd.author ? `<div><b>作者</b></div><div>${esc(rd.author)}</div>` : ""}
+        ${rd.date ? `<div><b>时间</b></div><div>${esc(rd.date)}</div>` : ""}
+        ${rd.image ? `<div><b>主图</b></div><div>${esc(rd.image)}</div>` : ""}
+      </div>
+      <pre>${esc(rd.content || "")}</pre>`
+    : '<div class="hint">未开启「智能正文提取」。勾选后自动识别标题/正文/主图，无需写选择器。</div>';
+
+  // images 下载结果
+  const imgs = r.images;
+  $("#pane-images").innerHTML = imgs
+    ? (imgs.count
+        ? `<div style="margin-bottom:10px;"><span class="badge green">已下载 ${imgs.count} 张图片 → ${esc(imgs.dir)}/</span></div>` +
+          imgs.images.map(i => `<div style="margin-bottom:6px;font-size:12px;">${esc(i.path)} <span class="badge yellow">${i.size} B</span></div>`).join("")
+        : '<div class="hint">页面里没找到可下载的图片。</div>')
+    : '<div class="hint">未开启「下载图片」。勾选后自动下载页面里的图片到 downloads/ 目录。</div>';
+
+  $("#pane-md").innerHTML = `<pre>${esc(r.markdown || "")}</pre>`;
+  $("#pane-html").innerHTML = `<pre>${esc(r.html || "")}</pre>`;
+
+  const xhr = r.xhr || [];
+  $("#pane-xhr").innerHTML = xhr.length
+    ? xhr.map(x => `<div style="margin-bottom:10px;"><b>${x.method} ${esc(x.url)}</b> <span class="badge yellow">${x.status}</span><pre style="margin-top:4px">${esc(x.body)}</pre></div>`).join("")
+    : '<div class="hint">无 XHR 捕获（需用 dynamic/stealth 取数器并填写正则）。</div>';
+
+  setPane("pane-items");
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function setPane(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.pane === name));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === name));
+}
+$("#tabs").onclick = (e) => { if (e.target.classList.contains("tab")) setPane(e.target.dataset.pane); };
+
+/* ---------- 插件创建 ---------- */
+$("#btn-create-plugin").onclick = async () => {
+  const rawCode = $("#p-code").value.trim();
+  const mode = rawCode ? "raw" : "schema";
+  const payload = {
+    name: $("#p-name").value, mode,
+    domains: $("#p-domains").value, container: $("#p-container").value,
+    description: "通过 Web UI 创建",
+    fields: collectFields($("#p-fields")),
+    code: rawCode,
+  };
+  const r = await api("/api/plugins", payload);
+  if (r.ok) { toast("插件 " + r.plugin.name + " 创建成功"); clearPluginForm(); loadStatus(); }
+  else { toast("创建失败: " + r.error, false); }
+};
+function clearPluginForm() {
+  ["#p-name","#p-domains","#p-container","#p-code"].forEach(s => $(s).value = "");
+  $("#p-fields").innerHTML = "";
+}
+
+/* ---------- JS ---------- */
+$("#btn-js").onclick = async () => {
+  const code = $("#js-code").value;
+  if (!code.trim()) { toast("请输入 JS 代码", false); return; }
+  const r = await api("/api/js", { code });
+  const out = $("#js-result");
+  if (r.ok) { out.textContent = JSON.stringify(r.result, null, 2); out.style.color = "var(--text)"; }
+  else { out.textContent = r.error + "\n" + (r.traceback || ""); out.style.color = "var(--red)"; }
+};
+
+/* ---------- 批量爬取 ---------- */
+$("#btn-add-crawl-field").onclick = () => addFieldRow($("#crawl-fields"));
+
+$("#btn-crawl").onclick = async () => {
+  const url = $("#crawl-url").value.trim();
+  if (!url) { toast("请填写起始列表页 URL", false); return; }
+  const btn = $("#btn-crawl");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 爬取中…';
+  const payload = {
+    start_url: url,
+    link_regex: $("#crawl-regex").value.trim(),
+    pages: parseInt($("#crawl-pages").value) || 1,
+    concurrency: parseInt($("#crawl-concurrency").value) || 4,
+    image_field: $("#crawl-image-field").value.trim(),
+    fields: collectFields($("#crawl-fields")),
+  };
+  const r = await api("/api/crawl", payload);
+  btn.disabled = false; btn.textContent = "开始批量爬取";
+  renderCrawlResult(r);
+};
+
+function renderCrawlResult(r) {
+  const box = $("#crawl-result");
+  if (!r.ok) {
+    box.innerHTML = `<div class="hint" style="color:var(--red)">失败：${esc(r.error)}</div>` +
+      `<pre style="margin-top:8px">${esc(r.traceback || "")}</pre>`;
+    return;
+  }
+  const st = r.stats || {};
+  const items = r.items || [];
+  const head = `<div style="margin:4px 0 10px;">
+      <span class="badge green">${r.count} 条</span>
+      <span class="badge yellow">耗时 ${(st.duration || 0).toFixed(1)}s</span>
+      ${r.downloaded ? `<span class="badge green">已下载 ${r.downloaded} 张图 → ${esc(r.download_dir)}/</span>` : ""}
+      <span class="badge ${st.blocked ? 'red' : ''}">被拦 ${st.blocked || 0}</span>
+    </div>`;
+  if (!items.length) { box.innerHTML = head + '<div class="hint">没有抓到数据，检查正则和字段选择器。</div>'; return; }
+  const keys = [...new Set(items.flatMap(i => Object.keys(i)))];
+  const table = `<table><thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>` +
+    items.map(i => `<tr>${keys.map(k => `<td>${esc(i[k] == null ? "" : (typeof i[k] === "string" ? i[k] : JSON.stringify(i[k])))}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table>`;
+  box.innerHTML = head + table;
+}
+
+/* ---------- Sitemap ---------- */
+$("#btn-sitemap").onclick = async () => {
+  const url = $("#sitemap-url").value.trim();
+  if (!url) { toast("请填写域名或网址", false); return; }
+  const btn = $("#btn-sitemap");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 发现 sitemap 中…';
+  const payload = {
+    url, limit: parseInt($("#sitemap-limit").value) || 20,
+    image_field: $("#sitemap-image-field").value.trim(),
+  };
+  const r = await api("/api/sitemap", payload);
+  btn.disabled = false; btn.textContent = "Sitemap 全站爬取";
+  renderSitemapResult(r);
+};
+
+function renderSitemapResult(r) {
+  const box = $("#sitemap-result");
+  if (!r.ok) { box.innerHTML = `<div class="hint" style="color:var(--red)">${esc(r.error)}</div>`; return; }
+  const st = r.stats || {};
+  const items = r.items || [];
+  let head = `<div style="margin:4px 0 10px;">
+      <span class="badge green">sitemap 共 ${r.total_in_sitemap} 个 URL</span>
+      <span class="badge yellow">本次爬 ${r.count} 条 · ${(st.duration||0).toFixed(1)}s</span>
+      ${r.downloaded ? `<span class="badge green">下载 ${r.downloaded} 张图</span>` : ""}
+    </div>`;
+  if (!items.length) { box.innerHTML = head + '<div class="hint">无结果。</div>'; return; }
+  const keys = [...new Set(items.flatMap(i => Object.keys(i)))].filter(k => k !== "content");
+  let table = `<table><thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr></thead><tbody>` +
+    items.map(i => `<tr>${keys.map(k => `<td>${esc(i[k] == null ? "" : (typeof i[k] === "string" ? i[k] : JSON.stringify(i[k]))).slice(0,200)}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table>`;
+  box.innerHTML = head + table;
+}
+
+/* ---------- AI 提取 ---------- */
+$("#btn-ai").onclick = async () => {
+  const url = $("#ai-url").value.trim();
+  const specText = $("#ai-fields").value.trim();
+  if (!url || !specText) { toast("请填写 URL 和字段描述", false); return; }
+  const field_spec = {};
+  for (const line of specText.split("\n")) {
+    const idx = line.indexOf("=");
+    if (idx > 0) field_spec[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+  }
+  const payload = {
+    url, field_spec,
+    base_url: $("#ai-base-url").value.trim(), api_key: $("#ai-api-key").value.trim(), model: $("#ai-model").value.trim(),
+  };
+  const out = $("#ai-result");
+  out.textContent = "AI 提取中…"; out.style.color = "var(--muted)";
+  const r = await api("/api/ai_extract", payload);
+  if (r.ok) { out.textContent = JSON.stringify(r.fields, null, 2); out.style.color = "var(--text)"; }
+  else { out.textContent = r.error; out.style.color = "var(--red)"; }
+};
+
+/* ---------- init ---------- */
+addFieldRow($("#p-fields"));
+addFieldRow($("#crawl-fields"));
+loadStatus();
+</script>
+</body>
+</html>
